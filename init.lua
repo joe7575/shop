@@ -39,7 +39,7 @@ local formspec_register =
 	default.gui_bg ..
 	default.gui_bg_img ..
 	default.gui_slots ..
-	"label[0,0;Register]" ..
+	"label[0,0;" .. S("Cash register") .. "]" ..
 	"list[current_name;register;0,0.75;8,4;]" ..
 	"list[current_player;main;0,5.25;8,4;]" ..
 	"listring[]"
@@ -49,19 +49,19 @@ local formspec_stock =
 	default.gui_bg ..
 	default.gui_bg_img ..
 	default.gui_slots ..
-	"label[0,0;Stock]" ..
+	"label[0,0;" .. S("Stock") .. "]" ..
 	"list[current_name;stock;0,0.75;8,4;]" ..
 	"list[current_player;main;0,5.25;8,4;]" ..
 	"listring[]"
 
 minetest.register_privilege("shop_admin", {
-	description = S("Shop administration and maintainence"),
+	description = S("Shop administration and maintenance"),
 	give_to_singleplayer = false,
 	give_to_admin = true,
 })
 
 minetest.register_node("shop:shop", {
-	description = "Shop",
+	description = S("Shop"),
 	tiles = {
 		"shop_shop_topbottom.png",
 		"shop_shop_topbottom.png",
@@ -78,7 +78,7 @@ minetest.register_node("shop:shop", {
 		local owner = placer:get_player_name()
 
 		meta:set_string("owner", owner)
-		meta:set_string("infotext", S("Shop (Owned by @1)", owner)
+		meta:set_string("infotext", S("Shop (Owned by @1)", owner))
 		meta:set_string("formspec", get_shop_formspec(pos, 1))
 		meta:set_string("admin_shop", "false")
 		meta:set_int("pages_current", 1)
@@ -209,7 +209,7 @@ minetest.register_node("shop:shop", {
 						inv:add_item("register", b[1])
 						pinv:add_item("main", s[1])
 					else
-						output(player, S("Shop is out of inventory!"))
+						output(player, S("Goods no longer in stock!"))
 					end
 				else
 					output(player, S("You're all filled up!"))
