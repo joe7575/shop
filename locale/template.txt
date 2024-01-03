@@ -1,0 +1,27 @@
+# textdomain: shop
+Goods=
+Price=
+Buy=
+Exit=
+Stock=
+Cash register=
+Shop administration and maintainence=
+Shop (Owned by @1)=
+Enabling infinite stocks in shop.=
+Disabling infinite stocks in shop.=
+Only the shop owner can open the register.=
+Only the shop owner can open the stock.=
+Shop closed.=
+Shop is out of inventory!=
+You're all filled up!=
+Not enough credits!=
+Banknote 1€=
+Banknote 10€=
+Banknote 100€=
+Banknote 1000€=
+
+
+##### not used anymore #####
+
+# textdomain: shop
+label[0,1;@1]=

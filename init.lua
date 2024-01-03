@@ -1,4 +1,4 @@
--- `Shop' mod for Minetest/DCBL
+-- `Shop' mod for Minetest
 -- Copyright 2017 James Stevenson
 -- Licensed GNU General Public License 3
 -- (Or higher, as you please.)
@@ -6,7 +6,8 @@
 --
 -- Sep-2019: modified by JoSto 
 
--- for lazy programmers
+local S = minetest.get_translator("shop")
+
 
 local output = function(name, message)
 	minetest.chat_send_player(name, message)
@@ -19,12 +20,12 @@ local function get_shop_formspec(pos, p)
 		default.gui_bg ..
 		default.gui_bg_img ..
 		default.gui_slots ..
-		"label[0,1;Ware]" ..
-		"label[3,1;Preis]" ..
-		"button[0,0;2,1;ok;Kaufen]" ..
-		"button_exit[3,0;2,1;exit;Exit]" ..
-		"button[6,0;2,1;stock;Lager]" ..
-		"button[6,1;2,1;register;Register]" ..
+		"label[0,1;" .. S("Goods") .. "]" ..
+		"label[3,1;" .. S("Price") .. "]" ..
+		"button[0,0;2,1;ok;" .. S("Buy") .. "]" ..
+		"button_exit[3,0;2,1;exit;" .. S("Exit") .. "]" ..
+		"button[6,0;2,1;stock;" .. S("Stock") .. "]" ..
+		"button[6,1;2,1;register;" .. S("Cash register") .. "]" ..
 		"button[0,2;1,1;prev;<]" ..
 		"button[1,2;1,1;next;>]" ..
 		"list[nodemeta:" .. spos .. ";sell" .. p .. ";1,1;1,1;]" ..
@@ -54,7 +55,7 @@ local formspec_stock =
 	"listring[]"
 
 minetest.register_privilege("shop_admin", {
-	description = "Shop administration and maintainence",
+	description = S("Shop administration and maintainence"),
 	give_to_singleplayer = false,
 	give_to_admin = true,
 })
@@ -77,7 +78,7 @@ minetest.register_node("shop:shop", {
 		local owner = placer:get_player_name()
 
 		meta:set_string("owner", owner)
-		meta:set_string("infotext", "Shop (Owned by " .. owner .. ")")
+		meta:set_string("infotext", S("Shop (Owned by @1)", owner)
 		meta:set_string("formspec", get_shop_formspec(pos, 1))
 		meta:set_string("admin_shop", "false")
 		meta:set_int("pages_current", 1)
@@ -95,10 +96,10 @@ minetest.register_node("shop:shop", {
 		end
 		local meta = minetest.get_meta(pos)
 		if meta:get_string("admin_shop") == "false" then
-			output(player:get_player_name(), "Enabling infinite stocks in shop.")
+			output(player:get_player_name(), S("Enabling infinite stocks in shop."))
 			meta:set_string("admin_shop", "true")
 		elseif meta:get_string("admin_shop") == "true" then
-			output(player:get_player_name(), "Disabling infinite stocks in shop.")
+			output(player:get_player_name(), S("Disabling infinite stocks in shop."))
 			meta:set_string("admin_shop", "false")
 		end
 	end,
@@ -172,14 +173,14 @@ minetest.register_node("shop:shop", {
 			end
 		elseif fields.register then
 			if player ~= owner and (not minetest.check_player_privs(player, "shop_admin")) then
-				output(player, "Only the shop owner can open the register.")
+				output(player, S("Only the shop owner can open the register."))
 				return
 			else
 				minetest.show_formspec(player, "shop:shop", formspec_register)
 			end
 		elseif fields.stock then
 			if player ~= owner and (not minetest.check_player_privs(player, "shop_admin")) then
-				output(player, "Only the shop owner can open the stock.")
+				output(player, S("Only the shop owner can open the stock."))
 				return
 			else
 				minetest.show_formspec(player, "shop:shop", formspec_stock)
@@ -189,7 +190,7 @@ minetest.register_node("shop:shop", {
 			if inv:is_empty("sell" .. pg_current) or
 			    inv:is_empty("buy" .. pg_current) or
 			    (not inv:room_for_item("register", b[1])) then
-				output(player, "Shop closed.")
+				output(player, S("Shop closed."))
 				return
 			end
 
@@ -208,13 +209,13 @@ minetest.register_node("shop:shop", {
 						inv:add_item("register", b[1])
 						pinv:add_item("main", s[1])
 					else
-						output(player, "Shop is out of inventory!")
+						output(player, S("Shop is out of inventory!"))
 					end
 				else
-					output(player, "You're all filled up!")
+					output(player, S("You're all filled up!"))
 				end
 			else
-				output(player, "Not enough credits!") -- 32X.
+				output(player, S("Not enough credits!")) -- 32X.
 			end
 		end
 	end,
@@ -266,28 +267,28 @@ minetest.register_node("shop:shop", {
 })
 
 minetest.register_craftitem("shop:geld1E", {
-	description = "Schein 1€",
+	description = S("Banknote 1€"),
 	inventory_image = "shop_1E.png",
 	groups = {money=1},
 	stack_max = 999,
 })
 
 minetest.register_craftitem("shop:geld10E", {
-	description = "Schein 10€",
+	description = S("Banknote 10€"),
 	inventory_image = "shop_10E.png",
 	groups = {money=1},
 	stack_max = 999,
 })
 
 minetest.register_craftitem("shop:geld100E", {
-	description = "Schein 100€",
+	description = S("Banknote 100€"),
 	inventory_image = "shop_100E.png",
 	groups = {money=1},
 	stack_max = 999,
 })
 
 minetest.register_craftitem("shop:geld1000E", {
-	description = "Schein 1000€",
+	description = S("Banknote 1000€"),
 	inventory_image = "shop_1000E.png",
 	groups = {money=1},
 	stack_max = 999,

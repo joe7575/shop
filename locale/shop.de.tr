@@ -1,0 +1,25 @@
+# textdomain: shop
+Goods=Waren
+Price=Preis
+Buy=Kaufen
+Exit=Beenden
+Stock=Lager
+Cash register=Kasse
+Shop administration and maintainence=Shop-Administration und -Wartung
+Shop (Owned by @1)=Shop (Eigentümer @1)
+Enabling infinite stocks in shop.=Ermögliche unbegrenzte Lagerbestände im Shop.
+Disabling infinite stocks in shop.=Verhindere unendliche Lagerbestände im Shop.
+Only the shop owner can open the register.=Nur der Shop-Besitzer kann die Kasse öffnen.
+Only the shop owner can open the stock.=Nur der Shop-Besitzer kann das Lager öffnen.
+
+Shop closed.=Shop geschlossen.
+Shop is out of inventory!=Ware nicht mehr vorrätig!
+You're all filled up!=Du bist bereits voll!
+Not enough credits!=Nicht genügend Guthaben!
+Banknote 1€=Banknote 1€
+Banknote 10€=Banknote 10€
+Banknote 100€=Banknote 100€
+Banknote 1000€=Banknote 1000€
+
+
+##### not used anymore #####
