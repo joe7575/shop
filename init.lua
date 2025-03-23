@@ -7,7 +7,8 @@
 -- Sep-2019: modified by JoSto 
 
 local S = minetest.get_translator("shop")
-
+local MP = minetest.get_modpath("shop")
+local debit = dofile(MP .. "/debit.lua")
 
 local output = function(name, message)
 	minetest.chat_send_player(name, message)
@@ -194,6 +195,35 @@ minetest.register_node("shop:shop", {
 				return
 			end
 
+			-- Pay with debit card (move item from stock to player register).
+			local item = b[1]:get_name()
+			local price = minetest.get_item_group(item, "amout")
+			if price and price > 0 then
+				if debit.has_debit(sender, price) then
+					local owner = meta:get_string("owner")
+					local amount = debit.take_debit(sender, price)
+					debit.credit(owner, price)
+					inv:remove_item("stock", s[1]) -- Take one from the stock.
+					pinv:add_item("main", s[1]) -- Give it to the player.
+					minetest.chat_send_player(player, S("Paid by debit card. Your balance is @1 €.", amount))
+					return
+				end
+			end
+
+			-- Load the debit card (move item from player register to stock).
+			local item = s[1]:get_name()
+			local price = minetest.get_item_group(item, "amout")
+			if price and price > 0 then
+				if debit.has_debit(sender, 0) and pinv:contains_item("main", b[1]) then
+					if inv:contains_item("stock", "shop:goldcard") then
+						local amount = debit.add_debit(sender, price)
+						pinv:remove_item("main", b[1]) -- Take one from the player.
+						inv:add_item("register", b[1]) -- Fill the register
+						minetest.chat_send_player(player, S("Refunded by debit card. Your balance is @1 €.", amount))
+						return
+					end
+				end
+			end
 			-- Player has funds.
 			if pinv:contains_item("main", b[1]) then
 				-- Player has space for the goods.
@@ -269,31 +299,44 @@ minetest.register_node("shop:shop", {
 minetest.register_craftitem("shop:geld1E", {
 	description = S("Banknote 1€"),
 	inventory_image = "shop_1E.png",
-	groups = {money=1},
+	groups = {money=1, amout=1},
 	stack_max = 999,
 })
 
 minetest.register_craftitem("shop:geld10E", {
 	description = S("Banknote 10€"),
 	inventory_image = "shop_10E.png",
-	groups = {money=1},
+	groups = {money=1, amout=10},
 	stack_max = 999,
 })
 
 minetest.register_craftitem("shop:geld100E", {
 	description = S("Banknote 100€"),
 	inventory_image = "shop_100E.png",
-	groups = {money=1},
+	groups = {money=1, amout=100},
 	stack_max = 999,
 })
 
 minetest.register_craftitem("shop:geld1000E", {
 	description = S("Banknote 1000€"),
 	inventory_image = "shop_1000E.png",
-	groups = {money=1},
+	groups = {money=1, amout=1000},
 	stack_max = 999,
 })
 
+minetest.register_craftitem("shop:debitcard", {
+	description = S("Debit Card"),
+	inventory_image = "shop_debit.png",
+	groups = {money=1},
+	stack_max = 1,
+})
+
+minetest.register_craftitem("shop:goldcard", {
+	description = S("Gold Card"),
+	inventory_image = "shop_gold.png",
+	groups = {money=1, not_in_creative_inventory = 1},
+	stack_max = 1,
+})
 
 minetest.register_craft({
 	output = "shop:shop",
