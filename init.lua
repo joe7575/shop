@@ -189,47 +189,49 @@ minetest.register_node("shop:shop", {
 		elseif fields.ok then
 			-- Shop's closed if not set up, or the till is full.
 			if inv:is_empty("sell" .. pg_current) or
-			    inv:is_empty("buy" .. pg_current) or
-			    (not inv:room_for_item("register", b[1])) then
+				inv:is_empty("buy" .. pg_current) or
+				(not inv:room_for_item("register", b[1])) then
 				output(player, S("Shop closed."))
 				return
 			end
 
-			-- Pay with debit card (move item from stock to player register).
-			local item = b[1]:get_name()
-			local price = minetest.get_item_group(item, "amout")
-			if price and price > 0 then
-				if debit.has_debit(sender, price) then
-					local owner = meta:get_string("owner")
-					local amount = debit.take_debit(sender, price)
-					debit.credit(owner, price)
-					inv:remove_item("stock", s[1]) -- Take one from the stock.
-					pinv:add_item("main", s[1]) -- Give it to the player.
-					minetest.chat_send_player(player, S("Paid by debit card. Your balance is @1 €.", amount))
-					return
-				end
-			end
-
-			-- Load the debit card (move item from player register to stock).
-			local item = s[1]:get_name()
-			local price = minetest.get_item_group(item, "amout")
-			if price and price > 0 then
-				if debit.has_debit(sender, 0) and pinv:contains_item("main", b[1]) then
-					if inv:contains_item("stock", "shop:goldcard") then
-						local amount = debit.add_debit(sender, price)
-						pinv:remove_item("main", b[1]) -- Take one from the player.
-						inv:add_item("register", b[1]) -- Fill the register
-						minetest.chat_send_player(player, S("Refunded by debit card. Your balance is @1 €.", amount))
-						return
-					end
-				end
-			end
 			-- Player has funds.
 			if pinv:contains_item("main", b[1]) then
 				-- Player has space for the goods.
 				if pinv:room_for_item("main", s[1]) then
 					-- There's inventory in stock.
 					if inv:contains_item("stock", s[1]) then
+						-- Pay with debit card (move item from stock to player register).
+						local item = b[1]:get_name()
+						local price = minetest.get_item_group(item, "amout") * b[1]:get_count()
+						if price and price > 0 then
+							if debit.has_debit(sender, price) then
+								local owner = meta:get_string("owner")
+								local amount = debit.take_debit(sender, price)
+								debit.credit(owner, price)
+								inv:remove_item("stock", s[1]) -- Take one from the stock.
+								pinv:add_item("main", s[1]) -- Give it to the player.
+								minetest.chat_send_player(player, S("Paid by debit card. Your balance is @1 €.", amount))
+								return
+							end
+						end
+
+						-- Load the debit card (move item from player register to stock).
+						item = s[1]:get_name()
+						price = minetest.get_item_group(item, "amout") * s[1]:get_count()
+						if price and price > 0 then
+							if debit.has_debit(sender, 0) and pinv:contains_item("main", b[1]) then
+								if inv:contains_item("stock", "shop:goldcard") then
+									local amount = debit.add_debit(sender, price)
+									pinv:remove_item("main", b[1]) -- Take one from the player.
+									inv:add_item("register", b[1]) -- Fill the register
+									minetest.chat_send_player(player, S("Refunded by debit card. Your balance is @1 €.", amount))
+									return
+								end
+							end
+						end
+
+						-- Pay with banknotes
 						pinv:remove_item("main", b[1]) -- Take the funds.
 						inv:add_item("register", b[1]) -- Fill the till.
 						inv:remove_item("stock", s[1]) -- Take one from the stock.
@@ -255,7 +257,7 @@ minetest.register_node("shop:shop", {
 		local inv = meta:get_inventory()
 		local playername = player:get_player_name()
 		if playername ~= owner and
-		    (not minetest.check_player_privs(playername, "shop_admin")) then
+			(not minetest.check_player_privs(playername, "shop_admin")) then
 			return 0
 		else
 			return stack:get_count()
@@ -266,7 +268,7 @@ minetest.register_node("shop:shop", {
 		local owner = meta:get_string("owner")
 		local playername = player:get_player_name()
 		if playername ~= owner and
-		    (not minetest.check_player_privs(playername, "shop_admin"))then
+			(not minetest.check_player_privs(playername, "shop_admin"))then
 			return 0
 		else
 			return stack:get_count()
@@ -277,22 +279,22 @@ minetest.register_node("shop:shop", {
 		local owner = meta:get_string("owner")
 		local playername = player:get_player_name()
 		if playername ~= owner and
-		    (not minetest.check_player_privs(playername, "shop_admin")) then
+			(not minetest.check_player_privs(playername, "shop_admin")) then
 			return 0
 		else
 			return count
 		end
 	end,
 	can_dig = function(pos, player) 
-                local meta = minetest.get_meta(pos) 
-                local owner = meta:get_string("owner") 
-                local inv = meta:get_inventory() 
-                return player:get_player_name() == owner and
-		    inv:is_empty("register") and
-		    inv:is_empty("stock") and
-		    -- FIXME Make all contents in the buy/sell lists drop as items.
-		    inv:is_empty("buy1") and
-		    inv:is_empty("sell1")
+				local meta = minetest.get_meta(pos) 
+				local owner = meta:get_string("owner") 
+				local inv = meta:get_inventory() 
+				return player:get_player_name() == owner and
+			inv:is_empty("register") and
+			inv:is_empty("stock") and
+			-- FIXME Make all contents in the buy/sell lists drop as items.
+			inv:is_empty("buy1") and
+			inv:is_empty("sell1")
 	end,
 })
 
