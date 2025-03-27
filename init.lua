@@ -209,8 +209,8 @@ minetest.register_node("shop:shop", {
 								local owner = meta:get_string("owner")
 								local amount = debit.take_debit(sender, price)
 								debit.credit(owner, price)
-								inv:remove_item("stock", s[1]) -- Take one from the stock.
-								pinv:add_item("main", s[1]) -- Give it to the player.
+								local sold = inv:remove_item("stock", s[1]) -- Take one from the stock.
+								pinv:add_item("main", sold) -- Give it to the player.
 								minetest.chat_send_player(player, S("Paid by debit card. Your balance is @1 €.", amount))
 								return
 							end
@@ -234,8 +234,8 @@ minetest.register_node("shop:shop", {
 						-- Pay with banknotes
 						pinv:remove_item("main", b[1]) -- Take the funds.
 						inv:add_item("register", b[1]) -- Fill the till.
-						inv:remove_item("stock", s[1]) -- Take one from the stock.
-						pinv:add_item("main", s[1]) -- Give it to the player.
+						local sold = inv:remove_item("stock", s[1]) -- Take one from the stock.
+						pinv:add_item("main", sold) -- Give it to the player.
 					elseif admin_shop == "true" then
 						pinv:remove_item("main", b[1])
 						inv:add_item("register", b[1])
