@@ -14,6 +14,124 @@ local output = function(name, message)
 	minetest.chat_send_player(name, message)
 end
 
+local function get_price(item)
+	local name = item:get_name()
+	local price = minetest.get_item_group(name, "amout") * item:get_count()
+	if price and price > 0 then
+		return price
+	end
+	return 0
+end
+
+local function player_has_debitcard(pinv)
+	if pinv:contains_item("main", "shop:debitcard") then
+		return true
+	end
+	return false
+end
+
+-- For banks only.
+local function shop_has_goldcard(inv)
+	if inv:contains_item("stock", "shop:goldcard") then
+		return true
+	end
+	return false
+end
+
+local function shop_has_debitcard(inv)
+	if inv:contains_item("register", "shop:debitcard") then
+		return true
+	end
+	return false
+end
+
+local function player_has_funds(player, pinv, funds)
+	local price = get_price(funds)
+	if price > 0 and player_has_debitcard(pinv) then
+		if debit.has_debit(player, price) then
+			return true
+		end
+	end
+	if pinv:contains_item("main", funds) then
+		return true
+	end
+	return false
+end
+
+local function player_has_space_for_goods(player, pinv, goods)
+	local price = get_price(goods)
+	if price > 0 and player_has_debitcard(pinv) then
+		return true
+	end
+	if pinv:room_for_item("main", goods) then
+		return true
+	end
+	return false
+end
+
+local function goods_in_stock(inv, goods)
+	local price = get_price(goods)
+	if price > 0 and shop_has_goldcard(inv) then
+		return true
+	end
+	if inv:contains_item("stock", goods) then
+		return true
+	end
+	return false
+end
+
+-- Move goods from shop to player.
+-- This can be:
+--  - Real goods from the shop's stock moved to the player's inventory.
+--  - Bank with gold card: Money from the shop's gold card, credited to the player, if the player has a debit card.
+--  - Bank with gold card:: Money from the shop's gold card, moved to the player's inventory, if the player has no debit card.
+local function move_goods_from_shop_to_player(sender, owner, inv, pinv, goods)
+	local price = get_price(goods)
+	if price > 0 then -- is money
+		if shop_has_goldcard(inv) then
+			if player_has_debitcard(pinv) then
+				local amount = debit.add_debit(sender, price)
+				output(sender:get_player_name(), S("Refunded by debit card. Your balance is @1 €.", amount))
+			else
+				pinv:add_item("main", goods)
+			end
+		end
+	else -- real goods
+		pinv:add_item("main", inv:remove_item("stock", goods))
+	end
+end
+
+-- Move funds from player to shop.
+-- This can be:
+--  - Real goods from the player's inventory moved to the shop's register.
+--  - Money from the player's debit card, moved to the shop's register.
+--  - Money from the player's debit card, moved to the owner's account, if the register has a debit card.
+--  - Money from the player's inventory, moved to the shop's register.
+--  - Money from the player's inventory, moved to the owner's account, if the register has a debit card.
+local function move_funds_from_player_to_shop(sender, owner, inv, pinv, funds)
+	local price = get_price(funds)
+	if price > 0 then -- is money
+		if player_has_debitcard(pinv) then
+			local amount = debit.take_debit(sender, price)
+			output(sender:get_player_name(), S("Paid by debit card. Your balance is @1 €.", amount))
+			if shop_has_debitcard(inv) then
+				debit.credit(owner, price)
+			else
+				inv:add_item("register", funds)
+			end
+		else -- No debit card.
+			if shop_has_debitcard(inv) then
+				debit.credit(owner, price)
+				pinv:remove_item("main", funds)
+			else
+				inv:add_item("register", pinv:remove_item("main", funds))
+			end
+		end
+	else -- real goods
+		inv:add_item("register", pinv:remove_item("main", funds))
+	end
+end
+
 local function get_shop_formspec(pos, p)
 	local spos = pos.x.. "," ..pos.y .. "," .. pos.z
 	local formspec =
@@ -40,7 +158,7 @@ local formspec_register =
 	default.gui_bg ..
 	default.gui_bg_img ..
 	default.gui_slots ..
-	"label[0,0;" .. S("Cash register") .. "]" ..
+	"label[0,0;" .. S("Cash register") .. "  " .. S("(For a transfer instead of cash, deposit debit card)") .. "]" ..
 	"list[current_name;register;0,0.75;8,4;]" ..
 	"list[current_player;main;0,5.25;8,4;]" ..
 	"listring[]"
@@ -50,7 +168,7 @@ local formspec_stock =
 	default.gui_bg ..
 	default.gui_bg_img ..
 	default.gui_slots ..
-	"label[0,0;" .. S("Stock") .. "]" ..
+	"label[0,0;" .. S("Stock for goods") .. "]" ..
 	"list[current_name;stock;0,0.75;8,4;]" ..
 	"list[current_player;main;0,5.25;8,4;]" ..
 	"listring[]"
@@ -111,16 +229,16 @@ minetest.register_node("shop:shop", {
 		local inv = meta:get_inventory()
 		local pg_current = meta:get_int("pages_current")
 		local pg_total = meta:get_int("pages_total")
-		local s = inv:get_list("sell" .. pg_current)
-		local b = inv:get_list("buy" .. pg_current)
-		local player = sender:get_player_name()
+		local shop2player = inv:get_list("sell" .. pg_current)
+		local player2shop = inv:get_list("buy" .. pg_current)
+		local playername = sender:get_player_name()
 		local pinv = sender:get_inventory()
 		local admin_shop = meta:get_string("admin_shop")
 		
 		if fields.next then
 			if pg_total < 32 and
 					pg_current == pg_total and
-					player == owner and
+					playername == owner and
 					not (inv:is_empty("sell" .. pg_current) or inv:is_empty("buy" .. pg_current)) then
 				inv:set_size("buy" .. pg_current + 1, 1)
 				inv:set_size("sell" .. pg_current + 1, 1)
@@ -173,81 +291,41 @@ minetest.register_node("shop:shop", {
 				meta:set_string("formspec", get_shop_formspec(node_pos, meta:get_int("pages_current")))
 			end
 		elseif fields.register then
-			if player ~= owner and (not minetest.check_player_privs(player, "shop_admin")) then
-				output(player, S("Only the shop owner can open the register."))
+			if playername ~= owner and (not minetest.check_player_privs(playername, "shop_admin")) then
+				output(playername, S("Only the shop owner can open the register."))
 				return
 			else
-				minetest.show_formspec(player, "shop:shop", formspec_register)
+				minetest.show_formspec(playername, "shop:shop", formspec_register)
 			end
 		elseif fields.stock then
-			if player ~= owner and (not minetest.check_player_privs(player, "shop_admin")) then
-				output(player, S("Only the shop owner can open the stock."))
+			if playername ~= owner and (not minetest.check_player_privs(playername, "shop_admin")) then
+				output(playername, S("Only the shop owner can open the stock."))
 				return
 			else
-				minetest.show_formspec(player, "shop:shop", formspec_stock)
+				minetest.show_formspec(playername, "shop:shop", formspec_stock)
 			end
 		elseif fields.ok then
 			-- Shop's closed if not set up, or the till is full.
 			if inv:is_empty("sell" .. pg_current) or
 				inv:is_empty("buy" .. pg_current) or
-				(not inv:room_for_item("register", b[1])) then
-				output(player, S("Shop closed."))
+				(not inv:room_for_item("register", player2shop[1])) then
+				output(playername, S("Shop closed."))
 				return
 			end
 
-			-- Player has funds.
-			if pinv:contains_item("main", b[1]) then
-				-- Player has space for the goods.
-				if pinv:room_for_item("main", s[1]) then
-					-- There's inventory in stock.
-					if inv:contains_item("stock", s[1]) then
-						-- Pay with debit card (move item from stock to player register).
-						local item = b[1]:get_name()
-						local price = minetest.get_item_group(item, "amout") * b[1]:get_count()
-						if price and price > 0 then
-							if debit.has_debit(sender, price) then
-								local owner = meta:get_string("owner")
-								local amount = debit.take_debit(sender, price)
-								debit.credit(owner, price)
-								local sold = inv:remove_item("stock", s[1]) -- Take one from the stock.
-								pinv:add_item("main", sold) -- Give it to the player.
-								minetest.chat_send_player(player, S("Paid by debit card. Your balance is @1 €.", amount))
-								return
-							end
-						end
-
-						-- Load the debit card (move item from player register to stock).
-						item = s[1]:get_name()
-						price = minetest.get_item_group(item, "amout") * s[1]:get_count()
-						if price and price > 0 then
-							if debit.has_debit(sender, 0) and pinv:contains_item("main", b[1]) then
-								if inv:contains_item("stock", "shop:goldcard") then
-									local amount = debit.add_debit(sender, price)
-									pinv:remove_item("main", b[1]) -- Take one from the player.
-									inv:add_item("register", b[1]) -- Fill the register
-									minetest.chat_send_player(player, S("Refunded by debit card. Your balance is @1 €.", amount))
-									return
-								end
-							end
-						end
-
-						-- Pay with banknotes
-						pinv:remove_item("main", b[1]) -- Take the funds.
-						inv:add_item("register", b[1]) -- Fill the till.
-						local sold = inv:remove_item("stock", s[1]) -- Take one from the stock.
-						pinv:add_item("main", sold) -- Give it to the player.
-					elseif admin_shop == "true" then
-						pinv:remove_item("main", b[1])
-						inv:add_item("register", b[1])
-						pinv:add_item("main", s[1])
+			if player_has_funds(sender, pinv, player2shop[1]) then
+				if player_has_space_for_goods(sender, pinv, shop2player[1]) then
+					if goods_in_stock(inv, shop2player[1]) then
+						move_goods_from_shop_to_player(sender, owner, inv, pinv, shop2player[1])
+						move_funds_from_player_to_shop(sender, owner, inv, pinv, player2shop[1])
 					else
-						output(player, S("Goods no longer in stock!"))
+						output(playername, S("Goods no longer in stock!"))
 					end
 				else
-					output(player, S("You're all filled up!"))
+					output(playername, S("You're all filled up!"))
 				end
 			else
-				output(player, S("Not enough credits!")) -- 32X.
+				output(playername, S("Not enough credits!")) -- 32X.
 			end
 		end
 	end,

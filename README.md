@@ -13,11 +13,14 @@ In addition to the banknotes, the mod also adds a debit card, which can be used 
 for goods in the shop.
 To use the debit card, the player simply has to have it in their inventory. The shop
 will automatically detect the card and use it to pay for the goods.
+If the debit card is deposited in the register, a transfer instead of cash payment is made.
+
+With the chat command `/balance` the player can check the balance of the debit card.
 
 ### Central Bank
 
 The role of the Central Bank is to issue banknotes and debit cards.
-This can also be done by using the shop. The shop can be used to spend money for ores
+This can be done by using the shop. The shop can be used to spend money for ores
 or other items and to issue debit cards against banknotes.
 As a bank the shop can also be used to top up credit cards.
 For this the Gold Card has to be placed in the shop's stock.

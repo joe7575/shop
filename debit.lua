@@ -71,7 +71,7 @@ function debit.credit(owner, amount)
 	end
 end
 
-minetest.register_chatcommand("debit", {
+minetest.register_chatcommand("balance", {
 	privs = {interact = true},
 	func = function(name, param)
 		local player = minetest.get_player_by_name(name)
