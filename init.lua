@@ -4,7 +4,7 @@
 -- (Or higher, as you please.)
 -- minetest.net
 --
--- Sep-2019: modified by JoSto 
+-- Sep-2019: modified by JoSto
 
 local S = minetest.get_translator("shop")
 local MP = minetest.get_modpath("shop")
@@ -116,7 +116,6 @@ minetest.register_node("shop:shop", {
 		local player = sender:get_player_name()
 		local pinv = sender:get_inventory()
 		local admin_shop = meta:get_string("admin_shop")
-		
 		if fields.next then
 			if pg_total < 32 and
 					pg_current == pg_total and
@@ -125,7 +124,7 @@ minetest.register_node("shop:shop", {
 				inv:set_size("buy" .. pg_current + 1, 1)
 				inv:set_size("sell" .. pg_current + 1, 1)
 				meta:set_string("formspec", get_shop_formspec(node_pos, pg_current + 1))
-				meta:set_int("pages_current", pg_current + 1) 
+				meta:set_int("pages_current", pg_current + 1)
 				meta:set_int("pages_total", pg_current + 1)
 			elseif pg_total > 1 then
 				if inv:is_empty("sell" .. pg_current) and inv:is_empty("buy" .. pg_current) then
@@ -195,18 +194,64 @@ minetest.register_node("shop:shop", {
 				return
 			end
 
-			-- Player has funds.
-			if pinv:contains_item("main", b[1]) then
+			-- figure out the item and price
+		  	local itemfor = b[1]:get_name()
+			local item = s[1]:get_name()
+			local price = core.get_item_group(itemfor, "amout") * b[1]:get_count()
+			local can_pay = pinv:contains_item("main", b[1]) or debit.has_debit(sender, price)
+			-- Player has funds either on hand or in debit accnt.
+			if can_pay then
+				-- check to see if this is a banking operation
+				local value = nil
+				if core.get_item_group(item, 'money') > 0 then
+					local gv = core.get_item_group(item, "amout")
+					local cnt = s[1]:get_count()
+					value = gv * s[1]:get_count()
+				end
+				if value ~= nil then
+					-- this is a trade for currency
+					-- the price may be 0
+					local has_cur = pinv:contains_item("main", b[1])
+					if not has_cur then
+						core.chat_send_player(player, S("Come back with some money"))
+						return
+					elseif value >= price then
+						local stock = false
+						if inv:contains_item("stock", "shop:goldcard") then stock = s[1] end
+						if not stock and not inv:contains_item("stock", s[1]) then
+							core.chat_send_player(player, S("Bank closed"))
+							return
+						else
+							-- remove from stock if not holding the gold card
+							stock = inv:remove_item("stock", s[1])
+						end
+						if not debit.has_debit(sender, 0) then
+							-- user has not activated the debit card yet
+							pinv:add_item("main", stock)
+						else
+							local amount = debit.add_debit(sender, value)
+							core.chat_send_player(player, S("Refunded by debit card. Your balance is @1 €.", amount))
+						end
+						local cash = pinv:remove_item("main", b[1])
+						inv:add_item("register", cash)
+						return
+					else
+						if not inv:contains_item("stock", s[1]) then
+							core.chat_send_player(player, S("Bank closed"))
+							return
+						end
+					end
+				end
 				-- Player has space for the goods.
 				if pinv:room_for_item("main", s[1]) then
 					-- There's inventory in stock.
 					if inv:contains_item("stock", s[1]) then
 						-- Pay with debit card (move item from stock to player register).
-						local item = b[1]:get_name()
-						local price = minetest.get_item_group(item, "amout") * b[1]:get_count()
 						if price and price > 0 then
-							if debit.has_debit(sender, price) then
+							-- use debit if the player hasn't got enough currency on hand
+							if not pinv:contains_item("main", b[1]) then
 								local owner = meta:get_string("owner")
+								-- if owner == sender then handle this issue end
 								local amount = debit.take_debit(sender, price)
 								debit.credit(owner, price)
 								local sold = inv:remove_item("stock", s[1]) -- Take one from the stock.
@@ -216,24 +261,9 @@ minetest.register_node("shop:shop", {
 							end
 						end
 
-						-- Load the debit card (move item from player register to stock).
-						item = s[1]:get_name()
-						price = minetest.get_item_group(item, "amout") * s[1]:get_count()
-						if price and price > 0 then
-							if debit.has_debit(sender, 0) and pinv:contains_item("main", b[1]) then
-								if inv:contains_item("stock", "shop:goldcard") then
-									local amount = debit.add_debit(sender, price)
-									pinv:remove_item("main", b[1]) -- Take one from the player.
-									inv:add_item("register", b[1]) -- Fill the register
-									minetest.chat_send_player(player, S("Refunded by debit card. Your balance is @1 €.", amount))
-									return
-								end
-							end
-						end
-
-						-- Pay with banknotes
-						pinv:remove_item("main", b[1]) -- Take the funds.
-						inv:add_item("register", b[1]) -- Fill the till.
+						-- Pay with banknotes or other items
+						local funds = pinv:remove_item("main", b[1]) -- Take the funds.
+						inv:add_item("register", funds) -- Fill the till.
 						local sold = inv:remove_item("stock", s[1]) -- Take one from the stock.
 						pinv:add_item("main", sold) -- Give it to the player.
 					elseif admin_shop == "true" then
@@ -285,10 +315,10 @@ minetest.register_node("shop:shop", {
 			return count
 		end
 	end,
-	can_dig = function(pos, player) 
-				local meta = minetest.get_meta(pos) 
-				local owner = meta:get_string("owner") 
-				local inv = meta:get_inventory() 
+	can_dig = function(pos, player)
+				local meta = minetest.get_meta(pos)
+				local owner = meta:get_string("owner")
+				local inv = meta:get_inventory()
 				return player:get_player_name() == owner and
 			inv:is_empty("register") and
 			inv:is_empty("stock") and
