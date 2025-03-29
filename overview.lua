@@ -48,7 +48,7 @@ local function get_formspec_string(lang_code)
 		}
 	end
 	-- sort by goods
-	table.sort(keys, function(a,b) return items[a]["name"] > items[b]["name"] end)
+	table.sort(keys, function(a,b) return items[a]["name"] < items[b]["name"] end)
 	-- Formspec string
 	local tbl = {S("Goods"), S("Price"), S("Position"), S("Owner"), S("Location")}
 	for _, key in ipairs(keys) do
