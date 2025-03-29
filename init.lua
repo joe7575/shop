@@ -9,6 +9,7 @@
 local S = minetest.get_translator("shop")
 local MP = minetest.get_modpath("shop")
 local debit = dofile(MP .. "/debit.lua")
+local overview = dofile(MP .. "/overview.lua")
 
 local output = function(name, message)
 	minetest.chat_send_player(name, message)
@@ -132,10 +133,40 @@ local function move_funds_from_player_to_shop(sender, owner, inv, pinv, funds)
 	end
 end
 
-local function get_shop_formspec(pos, p)
+local function register_goods(pos)
+	local meta = minetest.get_meta(pos)
+	local inv = meta:get_inventory()
+	local owner = meta:get_string("owner")
+	local location = meta:get_string("location")
+	for idx = 1,meta:get_int("pages_total") do
+		local key = (minetest.hash_node_position(pos) * 64) + idx
+		local name = inv:get_list("sell" .. idx)[1]:get_name() .. " " ..  inv:get_list("sell" .. idx)[1]:get_count()
+		local price = inv:get_list("buy" .. idx)[1]:get_name() .. " " ..  inv:get_list("buy" .. idx)[1]:get_count()
+		overview.register_goods(key, name, price, pos, owner, location)
+	end
+end
+
+local function drop_last_items(pos)
+	local meta = minetest.get_meta(pos)
+	local inv = meta:get_inventory()
+	local owner = meta:get_string("owner")
+	local location = meta:get_string("location")
+	for idx = 1,meta:get_int("pages_total") do
+		local item = inv:get_list("sell" .. idx)[1]
+		if not item:is_empty() then
+			minetest.add_item(pos, item)
+		end
+		item = inv:get_list("buy" .. idx)[1]
+		if not item:is_empty() then
+			minetest.add_item(pos, item)
+		end
+	end
+end
+
+local function get_shop_formspec(pos, meta, p)
 	local spos = pos.x.. "," ..pos.y .. "," .. pos.z
 	local formspec =
-		"size[8,7]" ..
+		"size[8,7.2]" ..
 		default.gui_bg ..
 		default.gui_bg_img ..
 		default.gui_slots ..
@@ -147,9 +178,10 @@ local function get_shop_formspec(pos, p)
 		"button[6,1;2,1;register;" .. S("Cash register") .. "]" ..
 		"button[0,2;1,1;prev;<]" ..
 		"button[1,2;1,1;next;>]" ..
+		"field[3.3,2.8;5,0.6;location;" .. S("Shop location:") .. ";" .. meta:get_string("location") .. "]" ..
 		"list[nodemeta:" .. spos .. ";sell" .. p .. ";1,1;1,1;]" ..
 		"list[nodemeta:" .. spos .. ";buy" .. p .. ";4,1;1,1;]" ..
-		"list[current_player;main;0,3.25;8,4;]"
+		"list[current_player;main;0,3.45;8,4;]"
 	return formspec
 end
 
@@ -198,7 +230,7 @@ minetest.register_node("shop:shop", {
 
 		meta:set_string("owner", owner)
 		meta:set_string("infotext", S("Shop (Owned by @1)", owner))
-		meta:set_string("formspec", get_shop_formspec(pos, 1))
+		meta:set_string("formspec", get_shop_formspec(pos, meta, 1))
 		meta:set_string("admin_shop", "false")
 		meta:set_int("pages_current", 1)
 		meta:set_int("pages_total", 1)
@@ -235,6 +267,11 @@ minetest.register_node("shop:shop", {
 		local pinv = sender:get_inventory()
 		local admin_shop = meta:get_string("admin_shop")
 		
+		if fields.location then
+			if playername == owner then
+				meta:set_string("location", fields.location)
+			end
+		end
 		if fields.next then
 			if pg_total < 32 and
 					pg_current == pg_total and
@@ -242,7 +279,7 @@ minetest.register_node("shop:shop", {
 					not (inv:is_empty("sell" .. pg_current) or inv:is_empty("buy" .. pg_current)) then
 				inv:set_size("buy" .. pg_current + 1, 1)
 				inv:set_size("sell" .. pg_current + 1, 1)
-				meta:set_string("formspec", get_shop_formspec(node_pos, pg_current + 1))
+				meta:set_string("formspec", get_shop_formspec(node_pos, meta, pg_current + 1))
 				meta:set_int("pages_current", pg_current + 1) 
 				meta:set_int("pages_total", pg_current + 1)
 			elseif pg_total > 1 then
@@ -265,7 +302,7 @@ minetest.register_node("shop:shop", {
 				else
 					meta:set_int("pages_current", 1)
 				end
-				meta:set_string("formspec", get_shop_formspec(node_pos, meta:get_int("pages_current")))
+				meta:set_string("formspec", get_shop_formspec(node_pos, meta, meta:get_int("pages_current")))
 			end
 		elseif fields.prev then
 			if pg_total > 1 then
@@ -288,7 +325,7 @@ minetest.register_node("shop:shop", {
 				elseif pg_current > 1 then
 					meta:set_int("pages_current", pg_current - 1)
 				end
-				meta:set_string("formspec", get_shop_formspec(node_pos, meta:get_int("pages_current")))
+				meta:set_string("formspec", get_shop_formspec(node_pos, meta, meta:get_int("pages_current")))
 			end
 		elseif fields.register then
 			if playername ~= owner and (not minetest.check_player_privs(playername, "shop_admin")) then
@@ -320,6 +357,8 @@ minetest.register_node("shop:shop", {
 						move_funds_from_player_to_shop(sender, owner, inv, pinv, player2shop[1])
 					else
 						output(playername, S("Goods no longer in stock!"))
+						local key = (minetest.hash_node_position(pos) * 64) + pg_current
+						overview.remove_goods(key)
 					end
 				else
 					output(playername, S("You're all filled up!"))
@@ -363,16 +402,26 @@ minetest.register_node("shop:shop", {
 			return count
 		end
 	end,
+	on_metadata_inventory_put = function(pos, listname, index, stack, player)
+		register_goods(pos)
+	end,
+	on_metadata_inventory_take = function(pos, listname, index, stack, player)
+		register_goods(pos)
+	end,
 	can_dig = function(pos, player) 
-				local meta = minetest.get_meta(pos) 
-				local owner = meta:get_string("owner") 
-				local inv = meta:get_inventory() 
-				return player:get_player_name() == owner and
-			inv:is_empty("register") and
-			inv:is_empty("stock") and
-			-- FIXME Make all contents in the buy/sell lists drop as items.
-			inv:is_empty("buy1") and
-			inv:is_empty("sell1")
+		local meta = minetest.get_meta(pos) 
+		local owner = meta:get_string("owner") 
+		local inv = meta:get_inventory() 
+		if player:get_player_name() == owner and inv:is_empty("register") and inv:is_empty("stock") then
+			for idx = 1,meta:get_int("pages_total") do 
+				local key = (minetest.hash_node_position(pos) * 64) + idx 
+				overview.remove_goods(key) 
+			end
+			drop_last_items(pos)
+			return true
+		else
+			return false
+		end
 	end,
 })
 
@@ -425,4 +474,13 @@ minetest.register_craft({
 		{"group:wood", "default:gold_ingot", "group:wood"},
 		{"group:wood", "group:wood", "group:wood"}
 	}
+})
+
+minetest.register_lbm({
+	name = "shop:register",
+	nodenames = {"shop:shop"},
+	run_at_every_load = true,
+	action = function(pos)
+		register_goods(pos)
+	end
 })

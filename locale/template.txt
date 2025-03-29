@@ -2,13 +2,12 @@
 Your balance is @1 €=
 Refunded by debit card. Your balance is @1 €.=
 Paid by debit card. Your balance is @1 €.=
-Goods=
-Price=
 Buy=
 Exit=
 Stock=
 Cash register=
-(Insert a debit card for a transfer instead of cash)=
+Shop location:=
+(For a transfer instead of cash, deposit debit card)=
 Stock for goods=
 Shop administration and maintenance=
 Shop=
@@ -27,6 +26,12 @@ Banknote 100€=
 Banknote 1000€=
 Debit Card=
 Gold Card=
+Goods=
+Price=
+Offer Overview=
+Position=
+Owner=
+Location=
 
 
 ##### not used anymore #####
