@@ -68,15 +68,21 @@ core.register_on_mods_loaded(function()
 	end
 	GoodsTbl = core.deserialize(storage:get_string("overview"))
 	for key,item in pairs(GoodsTbl) do
-		if item.name == nil or item.name == "" then
+		if item.name == nil or item.name == "" or item.name == " 0" then
 			GoodsTbl[key] = nil
-		elseif item.price == nil or item.price == "" then
+		elseif item.price == nil or item.price == "" or item.price == " 0" then
 			GoodsTbl[key] = nil
 		end
 	end
 end)
 
 function overview.register_goods(key, name, price, pos, owner, location)
+	if name == nil or name == "" or name == " 0" then
+		return
+	end
+	if price == nil or price == "" or price == " 0" then
+		return
+	end
 	if GoodsTbl[key] == nil then
 		GoodsTbl[key] = {
 			name = name,
