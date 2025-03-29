@@ -244,6 +244,11 @@ minetest.register_node("shop:shop", {
 		inv:set_size("sell1", 1)
 		inv:set_size("stock", 8*4)
 		inv:set_size("register", 8*4)
+		if minetest.get_modpath("techage") then
+			local number = techage.add_node(pos, "shop:shop")
+			meta:set_string("node_number", number)
+			meta:set_string("infotext", S("Shop (Owned by @1)", owner) .. " " .. number)
+		end
 	end,
 	on_skeleton_key_use = function(pos, player)
 		if not minetest.check_player_privs(player, "shop_admin") then
@@ -427,6 +432,11 @@ minetest.register_node("shop:shop", {
 			return false
 		end
 	end,
+	after_dig_node = function(pos, oldnode, oldmetadata, digger)
+		if minetest.get_modpath("techage") then
+			techage.remove_node(pos, oldnode, oldmetadata)
+		end
+	end,
 })
 
 minetest.register_craftitem("shop:geld1E", {
@@ -488,3 +498,61 @@ minetest.register_lbm({
 		register_goods(pos)
 	end
 })
+
+if minetest.get_modpath("techage") then
+	techage.register_node({"shop:shop"}, {
+		on_inv_request = function(pos, in_dir, access_type)
+			local meta = minetest.get_meta(pos)
+			if is_owner(pos, meta) then
+				if access_type == "push" then
+					return meta:get_inventory(), "stock"
+				elseif access_type == "pull" then
+					return meta:get_inventory(), "register"
+				end
+			end
+		end,
+		on_pull_item = function(pos, in_dir, num)
+			local meta = minetest.get_meta(pos)
+			if is_owner(pos, meta) then
+				local inv = meta:get_inventory()
+				return techage.get_items(pos, inv, "register", num)
+			end
+		end,
+		on_push_item = function(pos, in_dir, stack)
+			local meta = minetest.get_meta(pos)
+			local inv = meta:get_inventory()
+			return techage.put_items(inv, "stock", stack)
+		end,
+		on_unpull_item = function(pos, in_dir, stack)
+			local meta = minetest.get_meta(pos)
+			local inv = meta:get_inventory()
+			return techage.put_items(inv, "register", stack)
+		end,
+		on_recv_message = function(pos, src, topic, payload)
+			if topic == "state" then
+				local meta = minetest.get_meta(pos)
+				local inv = meta:get_inventory()
+				return techage.get_inv_state(inv, "stock")
+			elseif topic == "count" then
+				local meta = minetest.get_meta(pos)
+				local inv = meta:get_inventory()
+				return techage.check_inv_item(inv, "stock", payload)
+			else
+				return "unsupported"
+			end
+		end,
+		on_beduino_request_data = function(pos, src, topic, payload)
+			if topic == 131 then
+				local meta = minetest.get_meta(pos)
+				local inv = meta:get_inventory()
+				return 0, {techage.get_inv_state_num(inv, "stock")}
+			elseif topic == 192 and payload and type(payload) == "string" then
+				local meta = minetest.get_meta(pos)
+				local inv = meta:get_inventory()
+				return 0, {techage.check_inv_item(inv, "stock", payload)}
+			else
+				return 2, ""
+			end
+		end,
+	})
+end
