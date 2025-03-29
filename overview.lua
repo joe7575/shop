@@ -15,7 +15,7 @@ local function get_name(lang_code, item_name)
 	local ndef = minetest.registered_nodes[name] or minetest.registered_items[name]
 	if count and ndef and ndef.description then
 		local s = core.get_translated_string(lang_code, ndef.description) or "Oops"
-		return count .. " x " .. minetest.formspec_escape(s:sub(1, 24))
+		return minetest.formspec_escape(s:sub(1, 24)) .. " (" .. count .. ")"
 	else
 		return minetest.formspec_escape(item_name) 
 	end
