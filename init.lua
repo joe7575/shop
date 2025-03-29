@@ -140,9 +140,13 @@ local function register_goods(pos)
 	local location = meta:get_string("location")
 	for idx = 1,meta:get_int("pages_total") do
 		local key = (minetest.hash_node_position(pos) * 64) + idx
-		local name = inv:get_list("sell" .. idx)[1]:get_name() .. " " ..  inv:get_list("sell" .. idx)[1]:get_count()
-		local price = inv:get_list("buy" .. idx)[1]:get_name() .. " " ..  inv:get_list("buy" .. idx)[1]:get_count()
-		overview.register_goods(key, name, price, pos, owner, location)
+		local item = inv:get_list("sell" .. idx)[1]
+		if inv:contains_item("stock", item) then
+			local name = item:get_name() .. " " ..  item:get_count()
+			local item = inv:get_list("buy" .. idx)[1]
+			local price = item:get_name() .. " " ..  item:get_count()
+			overview.register_goods(key, name, price, pos, owner, location)
+		end
 	end
 end
 

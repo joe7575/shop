@@ -6,6 +6,7 @@ local storage = minetest.get_mod_storage()
 local overview = {}
 local GoodsTbl = {} -- structured list with: [key] = {name, price, spos, owner, location}
 local FormspecTbl = {} -- comma separated list
+local MAX_STR_LEN = 22 -- max length of strings in formspec
 
 local function get_name(lang_code, item_name)
 	if item_name == nil or item_name == "" then
@@ -15,7 +16,7 @@ local function get_name(lang_code, item_name)
 	local ndef = minetest.registered_nodes[name] or minetest.registered_items[name]
 	if count and ndef and ndef.description then
 		local s = core.get_translated_string(lang_code, ndef.description) or "Oops"
-		return minetest.formspec_escape(s:sub(1, 24)) .. " (" .. count .. ")"
+		return minetest.formspec_escape(s:sub(1, MAX_STR_LEN)) .. " (" .. count .. ")"
 	else
 		return minetest.formspec_escape(item_name) 
 	end
@@ -89,14 +90,14 @@ function overview.register_goods(key, name, price, pos, owner, location)
 			price = price,
 			spos = minetest.formspec_escape(core.pos_to_string(pos)),
 			owner = minetest.formspec_escape(owner),
-			location = minetest.formspec_escape(location:sub(1, 24))
+			location = minetest.formspec_escape(location:sub(1, MAX_STR_LEN))
 		}
 	else
 		GoodsTbl[key].name = name
 		GoodsTbl[key].price = price
 		GoodsTbl[key].spos = minetest.formspec_escape(core.pos_to_string(pos))
 		GoodsTbl[key].owner = minetest.formspec_escape(owner)
-		GoodsTbl[key].location = minetest.formspec_escape(location:sub(1, 24))
+		GoodsTbl[key].location = minetest.formspec_escape(location:sub(1, MAX_STR_LEN))
 	end
 	storage:set_string("overview", core.serialize(GoodsTbl))
 end
