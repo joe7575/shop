@@ -112,6 +112,14 @@ local function move_goods_from_shop_to_player(sender, owner, inv, pinv, goods)
 			else
 				pinv:add_item("main", goods)
 			end
+		else -- No gold card.
+			if not player_has_debitcard(pinv) then
+				inv:remove_item("stock", goods)
+				local amount = debit.add_debit(sender, price)
+				output(sender:get_player_name(), S("Refunded by debit card. Your balance is @1 €.", amount))
+			else
+				pinv:add_item("main", inv:remove_item("stock", goods))
+			end
 		end
 	else -- real goods
 		pinv:add_item("main", inv:remove_item("stock", goods))
