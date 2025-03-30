@@ -11,6 +11,22 @@ local MP = minetest.get_modpath("shop")
 local debit = dofile(MP .. "/debit.lua")
 local overview = dofile(MP .. "/overview.lua")
 
+local OwnerCache = {
+}
+
+-- Check if the chest is in the protected area of the owner
+local function is_owner(pos, meta)
+	local owner = meta:get_string("owner")
+	local key = minetest.hash_node_position(pos)
+	-- If successfull, store info in cache
+	if OwnerCache[key] ~= owner then
+		if not minetest.is_protected(pos, owner) then
+			OwnerCache[key] = owner
+		end
+	end
+	return OwnerCache[key] == owner
+end
+
 local output = function(name, message)
 	minetest.chat_send_player(name, message)
 end
