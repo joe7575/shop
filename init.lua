@@ -445,7 +445,8 @@ minetest.register_node("shop:shop", {
 		local meta = minetest.get_meta(pos) 
 		local owner = meta:get_string("owner") 
 		local inv = meta:get_inventory() 
-		if player:get_player_name() == owner and inv:is_empty("register") and inv:is_empty("stock") then
+		if (player:get_player_name() == owner or minetest.check_player_privs(player:get_player_name(), "shop_admin"))
+		and inv:is_empty("register") and inv:is_empty("stock") then
 			for idx = 1,meta:get_int("pages_total") do 
 				local key = (minetest.hash_node_position(pos) * 64) + idx 
 				overview.remove_goods(key) 

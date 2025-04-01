@@ -73,12 +73,30 @@ end
 
 minetest.register_chatcommand("balance", {
 	privs = {interact = true},
+	description = "Check account balance",
+	params = "",
 	func = function(name, param)
 		local player = minetest.get_player_by_name(name)
 		if player then
 			local meta = player:get_meta()
 			local debit = meta:get_int("shop_debit")
 			minetest.chat_send_player(name, S("Your balance is @1 €", debit))
+		end
+	end,
+})
+
+minetest.register_chatcommand("set_balance", {
+	privs = {server = true},
+	params = "<name> <value>",
+	description = "Set account balance",
+	func = function(name, param)
+		local destname, value = param:match("^(%S+)%s(.+)$")
+		local player = minetest.get_player_by_name(destname)
+		value = tonumber(value or "0") or 0
+		if player then
+			local meta = player:get_meta()
+			meta:set_int("shop_debit", value)
+			minetest.chat_send_player(name, S("The balance of @1 is @2 €", destname, value))
 		end
 	end,
 })

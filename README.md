@@ -15,7 +15,11 @@ To use the debit card, the player simply has to have it in their inventory. The 
 will automatically detect the card and use it to pay for the goods.
 If the debit card is deposited in the register, a transfer instead of cash payment is made.
 
-With the chat command `/balance` the player can check the balance of the debit card.
+### Chat Commands
+
+ - Check the balance of the debit card with `/balance`
+ - Set the account balance with: `/set_balance <player> <value>` (requires "server" privs)
+ - Reset the offer database with: `/reset_offer` (requires "server" privs)
 
 ### Central Bank
 

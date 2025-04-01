@@ -147,4 +147,16 @@ minetest.register_craft({
 	}
 })
 
+minetest.register_chatcommand("reset_offer", {
+	privs = {server = true},
+	params = "",
+	description = "Reset the offer database",
+	func = function(name, param)
+		GoodsTbl = {}
+		storage:set_string("overview", core.serialize(GoodsTbl))
+		minetest.chat_send_player(name, S("Database reset"))
+	end,
+})
+
+
 return overview
