@@ -1,4 +1,4 @@
-# shop
+# Shop [shop]
 
 Sales stand (shop) and banknotes for players to sell and exchange goods
 
@@ -9,15 +9,26 @@ Copyright 2017 James Stevenson, 2019-2025 Joachim Stolberg
 This mod adds a sales stand (shop) and banknotes for players to sell and exchange goods.
 In addition to the banknotes, the mod also adds a debit card, which can be used to pay
 for goods in the shop.
+
 To use the debit card, the player simply has to have it in their inventory. The shop
 will automatically detect the card and use it to pay for the goods.
-If the debit card is deposited in the register, a transfer instead of cash payment is made.
+However, if the player has cash in hand (wielded item), the shop will use the cash
+instead of the debit card.
+
+If the debit card is deposited in the register of the shop, a transfer instead of
+cash payment is made.
+
+### Offer Overview Board
+
+The Offer Overview board gives an overview of the current offers in all shops.
+The board is updated every hour and shows the current offers from all shops.
+To update the board manually, use the command `/offer_update` (requires "server" privs).
 
 ### Chat Commands
 
- - Check the balance of the debit card with `/balance`
- - Set the account balance with: `/set_balance <player> <value>` (requires "server" privs)
- - Reset the offer database with: `/reset_offer` (requires "server" privs)
+- Check the balance of the debit card with `/balance`
+- Set the account balance with: `/set_balance <player> <value>` (requires "server" privs)
+- Update the offer overview with: `/offer_update` (requires "server" privs)
 
 ### Central Bank
 
@@ -50,5 +61,3 @@ Boston, MA  02110-1301, USA.
 All textures, sounds and documentation files are licensed under the
 Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)
 http://creativecommons.org/licenses/by-sa/3.0/
-
-## 

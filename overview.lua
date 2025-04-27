@@ -58,27 +58,27 @@ local function get_formspec_string(lang_code)
 		table.insert(keys, key)
 	end
 	-- translate goods and price
-	local items = {}
-	for key,item in pairs(GoodsTbl) do
-		items[key] = {
-			name = get_name(lang_code, item.name or "oops"),
-			price = get_name(lang_code, item.price or "oops"),
-			spos = item.spos or "oops",
-			owner = item.owner or "oops",
-			location = item.location or "oops"
+	local offers = {}
+	for key,offer in pairs(GoodsTbl) do
+		offers[key] = {
+			goods = get_name(lang_code, offer.goods or "oops"),
+			price = get_name(lang_code, offer.price or "oops"),
+			spos = offer.spos or "oops",
+			owner = offer.owner or "oops",
+			location = offer.location or "oops"
 		}
 	end
 	-- sort by goods
-	table.sort(keys, function(a,b) return items[a]["name"] < items[b]["name"] end)
+	table.sort(keys, function(a,b) return offers[a]["goods"] < offers[b]["goods"] end)
 	-- Formspec string
-	local tbl = {S("Goods"), S("Price"), S("Position"), S("Owner"), S("Location")}
+	local tbl = {S("Goods (pieces)"), S("Price (pieces)"), S("Position"), S("Owner"), S("Location")}
 	for _, key in ipairs(keys) do
-		local item = items[key]
-		table.insert(tbl, item.name)
-		table.insert(tbl, item.price)
-		table.insert(tbl, item.spos)
-		table.insert(tbl, item.owner)
-		table.insert(tbl, item.location)
+		local offer = offers[key]
+		table.insert(tbl, offer.goods)
+		table.insert(tbl, offer.price)
+		table.insert(tbl, offer.spos)
+		table.insert(tbl, offer.owner)
+		table.insert(tbl, offer.location)
 	end
 	return table.concat(tbl, ",")
 end
@@ -121,28 +121,17 @@ core.register_craft({
 	}
 })
 
-core.register_chatcommand("reset_offer", {
-	privs = {server = true},
-	params = "",
-	description = "Reset the offer database",
-	func = function(name, param)
-		GoodsTbl = {}
-		storage:set_string("overview", core.serialize(GoodsTbl))
-		core.chat_send_player(name, S("Database reset"))
-	end,
-})
-
 local function maintain_shop_list()
 	GoodsTbl = {}
 	ShopList = core.deserialize(storage:get_string("ShopList"))
 	for _,pos in pairs(ShopList) do
-		for _, goods in shop.get_goods(pos) do
-			GoodsTbl[goods.key] = {
-				name = goods.name,
-				price = goods.price,
+		for _, offer in shop.get_offer(pos) do
+			GoodsTbl[offer.key] = {
+				goods = offer.goods,
+				price = offer.price,
 				spos = core.formspec_escape(core.pos_to_string(pos)),
-				owner = core.formspec_escape(goods.owner),
-				location = core.formspec_escape(goods.location:sub(1, MAX_STR_LEN))
+				owner = core.formspec_escape(offer.owner),
+				location = core.formspec_escape(offer.location:sub(1, MAX_STR_LEN))
 			}
 		end
 	end
@@ -155,6 +144,16 @@ core.register_on_mods_loaded(function()
 	end
 	core.after(10, maintain_shop_list)
 end)
+
+core.register_chatcommand("offer_update", {
+	privs = {server = true},
+	params = "",
+	description = "Update the offer database",
+	func = function(name, param)
+		core.after(0.1, maintain_shop_list)
+		core.chat_send_player(name, S("Offer Overview boards updated"))
+	end,
+})
 
 function shop.register_shop(pos)
 	local key = core.hash_node_position(pos)

@@ -48,7 +48,12 @@ local function get_price(item)
 	return 0
 end
 
-local function player_has_debitcard(pinv)
+local function player_has_debitcard(player, pinv)
+	local item = player:get_wielded_item()
+	print(item:get_name():sub(1, 10))
+	if item:get_name():sub(1, 10) == "shop:geld1" then
+		return false -- player wants to pay with cash
+	end
 	if pinv:contains_item("main", "shop:debitcard") then
 		return true
 	end
@@ -72,7 +77,7 @@ end
 
 local function player_has_funds(player, pinv, funds)
 	local price = get_price(funds)
-	if price > 0 and player_has_debitcard(pinv) then
+	if price > 0 and player_has_debitcard(player, pinv) then
 		if shop.has_debit(player, price) then
 			return true
 		end
@@ -85,7 +90,7 @@ end
 
 local function player_has_space_for_goods(player, pinv, goods)
 	local price = get_price(goods)
-	if price > 0 and player_has_debitcard(pinv) then
+	if price > 0 and player_has_debitcard(player, pinv) then
 		return true
 	end
 	if pinv:room_for_item("main", goods) then
@@ -114,14 +119,14 @@ local function move_goods_from_shop_to_player(sender, owner, inv, pinv, goods)
 	local price = get_price(goods)
 	if price > 0 then -- is money
 		if shop_has_goldcard(inv) then
-			if player_has_debitcard(pinv) then
+			if player_has_debitcard(sender, pinv) then
 				shop.add_debit(sender, price)
 				output(sender:get_player_name(), S("Refunded by debit card."))
 			else
 				pinv:add_item("main", goods)
 			end
 		else -- No gold card.
-			if player_has_debitcard(pinv) then
+			if player_has_debitcard(sender, pinv) then
 				inv:remove_item("stock", goods)
 				shop.add_debit(sender, price)
 				output(sender:get_player_name(), S("Refunded by debit card."))
@@ -144,7 +149,7 @@ end
 local function move_funds_from_player_to_shop(sender, owner, inv, pinv, funds)
 	local price = get_price(funds)
 	if price > 0 then -- is money
-		if player_has_debitcard(pinv) then
+		if player_has_debitcard(sender, pinv) then
 			local amount = shop.take_debit(sender, price)
 			output(sender:get_player_name(), S("Paid by debit card."))
 			if shop_has_debitcard(inv) then
@@ -183,7 +188,7 @@ local function debug_output(state, sender, owner, inv, pinv, goods, funds)
 	local playername = sender:get_player_name()
 	local shop_goldcard = shop_has_goldcard(inv) and "a goldcard" or "no goldcard"
 	local shop_debitcard = shop_has_debitcard(inv) and "a debitcard" or "no debitcard"
-	local player_debitcard = player_has_debitcard(pinv) and "a debitcard" or "no debitcard"
+	local player_debitcard = player_has_debitcard(sender, pinv) and "a debitcard" or "no debitcard"
 	local player_cash = get_player_cash(pinv, funds) .. " " .. funds:get_name()
 	local player_balance = sender:get_meta():get_int("shop_debit")
 	local sgoods = goods:get_count() .. " " .. goods:get_name()
@@ -210,8 +215,9 @@ local function drop_last_items(pos)
 	end
 end
 
-local function get_shop_formspec(pos, meta, p)
+local function get_shop_formspec(pos, meta, slot, wielded_pos)
 	local spos = pos.x.. "," ..pos.y .. "," .. pos.z
+	local xpos = wielded_pos - 1.075
 	local formspec =
 		"size[8,7.2]" ..
 		default.gui_bg ..
@@ -225,9 +231,10 @@ local function get_shop_formspec(pos, meta, p)
 		"button[6,1;2,1;register;" .. S("Cash register") .. "]" ..
 		"button[0,2;1,1;prev;<]" ..
 		"button[1,2;1,1;next;>]" ..
+		"image[" .. xpos .. ",3.35;1.2,1.2;shop_frame.png]" ..
 		"field[3.3,2.8;5,0.6;location;" .. S("Shop location:") .. ";" .. meta:get_string("location") .. "]" ..
-		"list[nodemeta:" .. spos .. ";sell" .. p .. ";1,1;1,1;]" ..
-		"list[nodemeta:" .. spos .. ";buy" .. p .. ";4,1;1,1;]" ..
+		"list[nodemeta:" .. spos .. ";sell" .. slot .. ";1,1;1,1;]" ..
+		"list[nodemeta:" .. spos .. ";buy" .. slot .. ";4,1;1,1;]" ..
 		"list[current_player;main;0,3.45;8,4;]"
 	return formspec
 end
@@ -277,7 +284,7 @@ core.register_node("shop:shop", {
 
 		meta:set_string("owner", owner)
 		meta:set_string("infotext", S("Shop (Owned by @1)", owner))
-		meta:set_string("formspec", get_shop_formspec(pos, meta, 1))
+		meta:set_string("formspec", get_shop_formspec(pos, meta, 1, placer:get_wield_index()))
 		meta:set_string("admin_shop", "false")
 		meta:set_int("pages_current", 1)
 		meta:set_int("pages_total", 1)
@@ -307,6 +314,11 @@ core.register_node("shop:shop", {
 			meta:set_string("admin_shop", "false")
 		end
 	end,
+	on_rightclick = function(pos, node, clicker, itemstack, pointed_thing)
+		local meta = core.get_meta(pos)
+		local pg_current = meta:get_int("pages_current")
+		meta:set_string("formspec", get_shop_formspec(pos, meta, pg_current, clicker:get_wield_index()))
+	end,
 	on_receive_fields = function(pos, formname, fields, sender)
 		local meta = core.get_meta(pos)
 		local node_pos = core.string_to_pos(meta:get_string("pos"))
@@ -332,7 +344,7 @@ core.register_node("shop:shop", {
 					not (inv:is_empty("sell" .. pg_current) or inv:is_empty("buy" .. pg_current)) then
 				inv:set_size("buy" .. pg_current + 1, 1)
 				inv:set_size("sell" .. pg_current + 1, 1)
-				meta:set_string("formspec", get_shop_formspec(node_pos, meta, pg_current + 1))
+				meta:set_string("formspec", get_shop_formspec(node_pos, meta, pg_current + 1, sender:get_wield_index()))
 				meta:set_int("pages_current", pg_current + 1) 
 				meta:set_int("pages_total", pg_current + 1)
 			elseif pg_total > 1 then
@@ -355,7 +367,7 @@ core.register_node("shop:shop", {
 				else
 					meta:set_int("pages_current", 1)
 				end
-				meta:set_string("formspec", get_shop_formspec(node_pos, meta, meta:get_int("pages_current")))
+				meta:set_string("formspec", get_shop_formspec(node_pos, meta, meta:get_int("pages_current"), sender:get_wield_index()))
 			end
 		elseif fields.prev then
 			if pg_total > 1 then
@@ -378,7 +390,7 @@ core.register_node("shop:shop", {
 				elseif pg_current > 1 then
 					meta:set_int("pages_current", pg_current - 1)
 				end
-				meta:set_string("formspec", get_shop_formspec(node_pos, meta, meta:get_int("pages_current")))
+				meta:set_string("formspec", get_shop_formspec(node_pos, meta, meta:get_int("pages_current"), sender:get_wield_index()))
 			end
 		elseif fields.register then
 			if playername ~= owner and (not core.check_player_privs(playername, "shop_admin")) then
@@ -411,7 +423,6 @@ core.register_node("shop:shop", {
 						move_funds_from_player_to_shop(sender, owner, inv, pinv, player2shop[1])
 					else
 						output(playername, S("Goods no longer in stock!"))
-						local key = (core.hash_node_position(pos) * 64) + pg_current
 					end
 				else
 					output(playername, S("You're all filled up!"))
@@ -601,8 +612,8 @@ end
 -- API functions
 ------------------------------------------------------------------------------
 local a = {}
--- Generator function for goods
-function shop.get_goods(pos)
+-- Generator function for offers
+function shop.get_offer(pos)
 	local meta = core.get_meta(pos)
 	local inv = meta:get_inventory()
 	local owner = meta:get_string("owner")
@@ -624,11 +635,12 @@ function shop.get_goods(pos)
 	local function iter(a, idx)
 		idx = next_slot(idx)
 		if idx then
-			local item = inv:get_list("buy" .. idx)[1]
+			local goods = inv:get_list("sell" .. idx)[1]
+			local price = inv:get_list("buy" .. idx)[1]
 			return idx, {
 				key = (core.hash_node_position(pos) * 64) + idx,
-				name = item:get_name() .. " " .. item:get_count(), 
-				price = item:get_name() .. " " .. item:get_count(), 
+				goods = goods:get_name() .. " " .. goods:get_count(), 
+				price = price:get_name() .. " " .. price:get_count(), 
 				owner = owner, 
 				location = location
 			}  -- variabel, result

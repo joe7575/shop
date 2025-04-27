@@ -1,7 +1,17 @@
 # textdomain: shop
 Your balance is @1 €=
-Refunded by debit card. Your balance is @1 €.=
-Paid by debit card. Your balance is @1 €.=
+The balance of @1 is @2 €=
+Offer Overview=
+Goods (pieces)=
+Price (pieces)=
+Position=
+Owner=
+Location=
+Offer Overview boards updated=
+Refunded by debit card.=
+Paid by debit card.=
+Goods=
+Price=
 Buy=
 Exit=
 Stock=
@@ -26,12 +36,6 @@ Banknote 100€=
 Banknote 1000€=
 Debit Card=
 Gold Card=
-Goods=
-Price=
-Offer Overview=
-Position=
-Owner=
-Location=
 
 
 ##### not used anymore #####
