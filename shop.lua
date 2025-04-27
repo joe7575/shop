@@ -118,14 +118,14 @@ local function move_goods_from_shop_to_player(sender, owner, inv, pinv, goods)
 	local price = get_price(goods)
 	if price > 0 then -- is money
 		if shop_has_goldcard(inv) then
-			if player_has_debitcard(sender, pinv, price) then
+			if player_has_debitcard(sender, pinv, 0) then
 				shop.add_debit(sender, price)
 				output(sender:get_player_name(), S("Refunded by debit card."))
 			else
 				pinv:add_item("main", goods)
 			end
 		else -- No gold card.
-			if player_has_debitcard(sender, pinv, price) then
+			if player_has_debitcard(sender, pinv, 0) then
 				inv:remove_item("stock", goods)
 				shop.add_debit(sender, price)
 				output(sender:get_player_name(), S("Refunded by debit card."))
