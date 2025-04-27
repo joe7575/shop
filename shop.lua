@@ -48,14 +48,15 @@ local function get_price(item)
 	return 0
 end
 
-local function player_has_debitcard(player, pinv)
+local function player_has_debitcard(player, pinv, price)
 	local item = player:get_wielded_item()
-	print(item:get_name():sub(1, 10))
 	if item:get_name():sub(1, 10) == "shop:geld1" then
 		return false -- player wants to pay with cash
 	end
 	if pinv:contains_item("main", "shop:debitcard") then
-		return true
+		if shop.has_debit(player, price) then
+			return true
+		end
 	end
 	return false
 end
@@ -77,10 +78,8 @@ end
 
 local function player_has_funds(player, pinv, funds)
 	local price = get_price(funds)
-	if price > 0 and player_has_debitcard(player, pinv) then
-		if shop.has_debit(player, price) then
-			return true
-		end
+	if price > 0 and player_has_debitcard(player, pinv, price) then
+		return true
 	end
 	if pinv:contains_item("main", funds) then
 		return true
@@ -90,7 +89,7 @@ end
 
 local function player_has_space_for_goods(player, pinv, goods)
 	local price = get_price(goods)
-	if price > 0 and player_has_debitcard(player, pinv) then
+	if price > 0 and player_has_debitcard(player, pinv, price) then
 		return true
 	end
 	if pinv:room_for_item("main", goods) then
@@ -119,14 +118,14 @@ local function move_goods_from_shop_to_player(sender, owner, inv, pinv, goods)
 	local price = get_price(goods)
 	if price > 0 then -- is money
 		if shop_has_goldcard(inv) then
-			if player_has_debitcard(sender, pinv) then
+			if player_has_debitcard(sender, pinv, price) then
 				shop.add_debit(sender, price)
 				output(sender:get_player_name(), S("Refunded by debit card."))
 			else
 				pinv:add_item("main", goods)
 			end
 		else -- No gold card.
-			if player_has_debitcard(sender, pinv) then
+			if player_has_debitcard(sender, pinv, price) then
 				inv:remove_item("stock", goods)
 				shop.add_debit(sender, price)
 				output(sender:get_player_name(), S("Refunded by debit card."))
@@ -149,7 +148,7 @@ end
 local function move_funds_from_player_to_shop(sender, owner, inv, pinv, funds)
 	local price = get_price(funds)
 	if price > 0 then -- is money
-		if player_has_debitcard(sender, pinv) then
+		if player_has_debitcard(sender, pinv, price) then
 			local amount = shop.take_debit(sender, price)
 			output(sender:get_player_name(), S("Paid by debit card."))
 			if shop_has_debitcard(inv) then
@@ -188,7 +187,7 @@ local function debug_output(state, sender, owner, inv, pinv, goods, funds)
 	local playername = sender:get_player_name()
 	local shop_goldcard = shop_has_goldcard(inv) and "a goldcard" or "no goldcard"
 	local shop_debitcard = shop_has_debitcard(inv) and "a debitcard" or "no debitcard"
-	local player_debitcard = player_has_debitcard(sender, pinv) and "a debitcard" or "no debitcard"
+	local player_debitcard = player_has_debitcard(sender, pinv, 0) and "a debitcard" or "no debitcard"
 	local player_cash = get_player_cash(pinv, funds) .. " " .. funds:get_name()
 	local player_balance = sender:get_meta():get_int("shop_debit")
 	local sgoods = goods:get_count() .. " " .. goods:get_name()
