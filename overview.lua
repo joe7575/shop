@@ -1,24 +1,44 @@
+--[[
+    Shop mod for Minetest to buy/sell items
+    Copyright 2017 James Stevenson, 2019 - 2025 Joachim Stolberg
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+]]--
+
 -- Offer overview
 -- | Goods | Price | Position | Player | Location |
 
-local S = minetest.get_translator("shop")
-local storage = minetest.get_mod_storage()
-local overview = {}
+local S = core.get_translator("shop")
+local storage = core.get_mod_storage()
+
+local ShopList = {}	-- Array with shop positions
 local GoodsTbl = {} -- structured list with: [key] = {name, price, spos, owner, location}
 local FormspecTbl = {} -- comma separated list
 local MAX_STR_LEN = 22 -- max length of strings in formspec
+local CYCLE_TIME = 60*60 -- every hour
 
 local function get_name(lang_code, item_name)
 	if item_name == nil or item_name == "" then
 		return ""
 	end
 	local name, count = item_name:match("([^ ]+) ([0-9]+)")
-	local ndef = minetest.registered_nodes[name] or minetest.registered_items[name]
+	local ndef = core.registered_nodes[name] or core.registered_items[name]
 	if count and ndef and ndef.description then
 		local s = core.get_translated_string(lang_code, ndef.description) or "Oops"
-		return minetest.formspec_escape(s:sub(1, MAX_STR_LEN)) .. " (" .. count .. ")"
+		return core.formspec_escape(s:sub(1, MAX_STR_LEN)) .. " (" .. count .. ")"
 	else
-		return minetest.formspec_escape(item_name) 
+		return core.formspec_escape(item_name) 
 	end
 end
 
@@ -63,53 +83,7 @@ local function get_formspec_string(lang_code)
 	return table.concat(tbl, ",")
 end
 
-core.register_on_mods_loaded(function()
-	if storage:get_string("overview") == "" then
-		storage:set_string("overview", core.serialize({}))
-	end
-	GoodsTbl = core.deserialize(storage:get_string("overview"))
-	for key,item in pairs(GoodsTbl) do
-		if item.name == nil or item.name == "" or item.name == " 0" then
-			GoodsTbl[key] = nil
-		elseif item.price == nil or item.price == "" or item.price == " 0" then
-			GoodsTbl[key] = nil
-		end
-	end
-end)
-
-function overview.register_goods(key, name, price, pos, owner, location)
-	if name == nil or name == "" or name == " 0" then
-		return
-	end
-	if price == nil or price == "" or price == " 0" then
-		return
-	end
-	if GoodsTbl[key] == nil then
-		GoodsTbl[key] = {
-			name = name,
-			price = price,
-			spos = minetest.formspec_escape(core.pos_to_string(pos)),
-			owner = minetest.formspec_escape(owner),
-			location = minetest.formspec_escape(location:sub(1, MAX_STR_LEN))
-		}
-	else
-		GoodsTbl[key].name = name
-		GoodsTbl[key].price = price
-		GoodsTbl[key].spos = minetest.formspec_escape(core.pos_to_string(pos))
-		GoodsTbl[key].owner = minetest.formspec_escape(owner)
-		GoodsTbl[key].location = minetest.formspec_escape(location:sub(1, MAX_STR_LEN))
-	end
-	storage:set_string("overview", core.serialize(GoodsTbl))
-end
-
-function overview.remove_goods(key)
-	if GoodsTbl[key] ~= nil then
-		GoodsTbl[key] = nil
-		storage:set_string("overview", core.serialize(GoodsTbl))
-	end
-end
-
-minetest.register_node("shop:overview", {
+core.register_node("shop:overview", {
 	description = S("Offer Overview"),
 	tiles = {
 		-- up, down, right, left, back, front
@@ -125,7 +99,7 @@ minetest.register_node("shop:overview", {
 	},
 
 	on_rightclick = function(pos, node, clicker, itemstack, pointed_thing)
-		local meta = minetest.get_meta(pos)
+		local meta = core.get_meta(pos)
 		local lang_code = core.get_player_information(clicker:get_player_name()).lang_code or "en"
 		meta:set_string("formspec", formspec(get_formspec_string(lang_code)))
 		meta:set_string("infotext", S("Offer Overview"))
@@ -138,7 +112,7 @@ minetest.register_node("shop:overview", {
 	is_ground_content = false,
 })
 
-minetest.register_craft({
+core.register_craft({
 	output = "shop:overview",
 	recipe = {
 		{"default:paper", "default:paper", "default:paper"},
@@ -147,16 +121,50 @@ minetest.register_craft({
 	}
 })
 
-minetest.register_chatcommand("reset_offer", {
+core.register_chatcommand("reset_offer", {
 	privs = {server = true},
 	params = "",
 	description = "Reset the offer database",
 	func = function(name, param)
 		GoodsTbl = {}
 		storage:set_string("overview", core.serialize(GoodsTbl))
-		minetest.chat_send_player(name, S("Database reset"))
+		core.chat_send_player(name, S("Database reset"))
 	end,
 })
 
+local function maintain_shop_list()
+	GoodsTbl = {}
+	ShopList = core.deserialize(storage:get_string("ShopList"))
+	for _,pos in pairs(ShopList) do
+		for _, goods in shop.get_goods(pos) do
+			GoodsTbl[goods.key] = {
+				name = goods.name,
+				price = goods.price,
+				spos = core.formspec_escape(core.pos_to_string(pos)),
+				owner = core.formspec_escape(goods.owner),
+				location = core.formspec_escape(goods.location:sub(1, MAX_STR_LEN))
+			}
+		end
+	end
+	core.after(CYCLE_TIME, maintain_shop_list)
+end
 
-return overview
+core.register_on_mods_loaded(function()
+	if storage:get_string("ShopList") == "" then
+		storage:set_string("ShopList", core.serialize({}))
+	end
+	core.after(10, maintain_shop_list)
+end)
+
+function shop.register_shop(pos)
+	local key = core.hash_node_position(pos)
+	ShopList[key] = pos
+	storage:set_string("ShopList", core.serialize(ShopList))
+end
+
+function shop.delete_shop(pos)
+	local key = core.hash_node_position(pos)
+	ShopList[key] = nil
+	storage:set_string("ShopList", core.serialize(ShopList))
+end
+

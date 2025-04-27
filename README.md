@@ -2,9 +2,7 @@
 
 Sales stand (shop) and banknotes for players to sell and exchange goods
 
-Copyright 2017 James Stevenson, 2023-2025 Joachim Stolberg  
-Licensed GNU General Public License 3  
-(Or higher, as you please.)
+Copyright 2017 James Stevenson, 2019-2025 Joachim Stolberg  
 
 ## Description
 
@@ -30,3 +28,27 @@ As a bank the shop can also be used to top up credit cards.
 For this the Gold Card has to be placed in the shop's stock.
 The owner of the Gold Card has unlimited credit, the card should be used with care or only
 used for the Central bank to issue debit cards.
+
+## License of source code
+
+This mod is free software; you can redistribute and/or
+modify it under the terms of the GNU General Public License version 3 or later
+published by the Free Software Foundation.
+
+This mod is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public
+License along with this mod; if not, write to the
+Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+Boston, MA  02110-1301, USA.
+
+## License of media (textures, sounds and documentation)
+
+All textures, sounds and documentation files are licensed under the
+Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)
+http://creativecommons.org/licenses/by-sa/3.0/
+
+## 
