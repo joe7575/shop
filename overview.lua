@@ -145,10 +145,10 @@ core.register_on_mods_loaded(function()
 	core.after(10, maintain_shop_list)
 end)
 
-core.register_chatcommand("offer_update", {
+core.register_chatcommand("update_offer", {
 	privs = {server = true},
 	params = "",
-	description = "Update the offer database",
+	description = S("Update the Offer Overview boards"),
 	func = function(name, param)
 		core.after(0.1, maintain_shop_list)
 		core.chat_send_player(name, S("Offer Overview boards updated"))

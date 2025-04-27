@@ -1,5 +1,8 @@
 # textdomain: shop
+Check account balance=
 Your balance is @1 €=
+Set account balance=
+Usage: /set_balance <name> <value>=
 The balance of @1 is @2 €=
 Offer Overview=
 Goods (pieces)=
@@ -7,6 +10,7 @@ Price (pieces)=
 Position=
 Owner=
 Location=
+Update the Offer Overview boards=
 Offer Overview boards updated=
 Refunded by debit card.=
 Paid by debit card.=

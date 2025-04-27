@@ -1,12 +1,16 @@
 # textdomain: shop
+Check account balance=Kontostand prüfen
 Your balance is @1 €=Dein Guthaben beträgt @1 €
+Set account balance=Kontostand festlegen
+Usage: /set_balance <name> <value>=Verwendung: /set_balance <Name> <Wert>
 The balance of @1 is @2 €=Das Guthaben von @1 beträgt @2 €.
-Offer Overview=Warenangebot
+Offer Overview=Warenangebotübersicht
 Goods (pieces)=Ware (Stück)
 Price (pieces)=Preis (Stück)
 Position=Position
 Owner=Besitzer
 Location=Standort
+Update the Offer Overview boards=Angebotsübersichtstafeln aktualisieren
 Offer Overview boards updated=Angebotsübersichtstafeln aktualisiert
 Refunded by debit card.=Rückerstattung per Debitkarte.
 Paid by debit card.=Mit Debitkarte bezahlt.

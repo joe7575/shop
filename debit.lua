@@ -85,7 +85,7 @@ end
 
 core.register_chatcommand("balance", {
 	privs = {interact = true},
-	description = "Check account balance",
+	description = S("Check account balance"),
 	params = "",
 	func = function(name, param)
 		local player = core.get_player_by_name(name)
@@ -100,9 +100,12 @@ core.register_chatcommand("balance", {
 core.register_chatcommand("set_balance", {
 	privs = {server = true},
 	params = "<name> <value>",
-	description = "Set account balance",
+	description = S("Set account balance"),
 	func = function(name, param)
 		local destname, value = param:match("^(%S+)%s(.+)$")
+		if not destname or not value then
+			return false, S("Usage: /set_balance <name> <value>")
+		end
 		local player = core.get_player_by_name(destname)
 		value = tonumber(value or "0") or 0
 		if player then

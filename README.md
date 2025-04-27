@@ -1,6 +1,6 @@
 # Shop [shop]
 
-Sales stand (shop) and banknotes for players to sell and exchange goods
+Sales stand (shop) and banknotes for players to sell and exchange goods.
 
 Copyright 2017 James Stevenson, 2019-2025 Joachim Stolberg  
 
