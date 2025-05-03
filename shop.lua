@@ -618,6 +618,7 @@ function shop.get_offer(pos)
 	local owner = meta:get_string("owner")
 	local location = meta:get_string("location")
 	local last = meta:get_int("pages_total")
+	local key = core.hash_node_position(pos) * 32
 
 	local function next_slot(idx)
 		idx = idx + 1
@@ -637,7 +638,7 @@ function shop.get_offer(pos)
 			local goods = inv:get_list("sell" .. idx)[1]
 			local price = inv:get_list("buy" .. idx)[1]
 			return idx, {
-				key = (core.hash_node_position(pos) * 64) + idx,
+				key = key + idx - 1,
 				goods = goods:get_name() .. " " .. goods:get_count(), 
 				price = price:get_name() .. " " .. price:get_count(), 
 				owner = owner, 
