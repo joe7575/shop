@@ -125,14 +125,16 @@ local function maintain_shop_list()
 	GoodsTbl = {}
 	ShopList = core.deserialize(storage:get_string("ShopList"))
 	for _,pos in pairs(ShopList) do
-		for _, offer in shop.get_offer(pos) do
-			GoodsTbl[offer.key] = {
-				goods = offer.goods,
-				price = offer.price,
-				spos = core.formspec_escape(core.pos_to_string(pos)),
-				owner = core.formspec_escape(offer.owner),
-				location = core.formspec_escape(offer.location:sub(1, MAX_STR_LEN))
-			}
+		if pos and type(pos) == "table" then
+			for _, offer in shop.get_offer(pos) do
+				GoodsTbl[offer.key] = {
+					goods = offer.goods,
+					price = offer.price,
+					spos = core.formspec_escape(core.pos_to_string(pos)),
+					owner = core.formspec_escape(offer.owner),
+					location = core.formspec_escape(offer.location:sub(1, MAX_STR_LEN))
+				}
+			end
 		end
 	end
 	core.after(CYCLE_TIME, maintain_shop_list)
